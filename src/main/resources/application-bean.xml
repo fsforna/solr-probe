@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+      
+    
+    <bean id="propertyPlaceholderConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <!-- default settings -->
+                <value>classpath:conf.properties</value>
+                <value>file:${conf}</value>
+            </list>
+        </property>
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE"/>
+        <property name="ignoreResourceNotFound" value="true" />
+        <property name="ignoreUnresolvablePlaceholders" value="false"/>
+    </bean>
+
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${jdbc.driverClassName}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <property name="initialSize" value="1" />
+        <property name="maxActive" value="5" />
+        <property name="poolPreparedStatements" value="true" />
+        <property name="maxOpenPreparedStatements" value="10" />
+    </bean>
+    
+    <!-- Hibernate Session Factory  -->
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+
+        <!-- Hibernate configuration -->
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">${hibernate.dialect}</prop>
+                <prop key="hibernate.hbm2ddl.auto">${hibernate.ddl}</prop>
+            </props>
+        </property>
+
+        <!-- The packages that contain our Hibernate model classes -->
+        <property name="packagesToScan">
+            <list>
+                <value>it.tai.solr.dao.entities</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- Hibernate transaction management -->
+    <bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+    
+    <bean id="probeDAO" class="it.tai.solr.dao.impl.ProbeDAOImpl">
+        <property name="sessionFactory" ref="sessionFactory" />
+    </bean>
+    
+    <bean id="solrSummaryService" class="it.tai.solr.services.impl.SolrSummaryServiceImpl">
+        <property name="probeDAO" ref="probeDAO" />
+        <property name="days" value="${warning.solr.policy.days}" />
+        <property name="mailSender" ref="mailSender" />
+        <property name="warningSolrMessage" ref="warningSolrMessage" />
+    </bean>
+        
+    <bean id="solrHttpInvoker" class="it.tai.solr.http.HttpInvoker">
+        <property name="solrURL" value="${solr.url}" />
+    </bean>
+    
+    <bean name="solrJob" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="jobClass" value="it.tai.solr.probes.SolrProbe"/>
+        <property name="jobDataAsMap">
+            <map>
+                <entry key="httpInvoker" value-ref="solrHttpInvoker"/>
+                <entry key="solrSummaryService" value-ref="solrSummaryService"/>
+            </map>
+        </property>
+    </bean>
+    
+    <bean id="cronSOLR" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="solrJob"/>
+        <property name="cronExpression" value="${quartz.solr.trigger.schedule}"/>
+    </bean>
+    
+    <bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="triggers">
+            <list>
+                <ref bean="cronSOLR"/>
+            </list>
+        </property>
+        <property name="quartzProperties">  
+            <props>  
+                <prop key="org.quartz.scheduler.skipUpdateCheck">true</prop>  
+            </props>  
+        </property>
+    </bean>
+    
+    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+        <property name="host" value="${warning.solr.mail.host}"/>
+        <property name="port" value="${warning.solr.mail.port}"/>
+        <property name="username" value="${warning.solr.mail.username}"/>
+        <property name="password" value="${warning.solr.mail.password}"/>
+        <property name="javaMailProperties">
+            <props>
+                <prop key="mail.transport.protocol">smtp</prop>
+                <prop key="mail.smtp.auth">${warning.solr.mail.auth}</prop>
+                <prop key="mail.smtp.starttls.enable">${warning.solr.mail.tls}</prop>
+                <prop key="mail.debug">false</prop>
+            </props>
+        </property>
+    </bean>
+     
+    <!-- You can have some pre-configured messagess also which are ready to send -->
+    <bean id="warningSolrMessage" class="org.springframework.mail.SimpleMailMessage">
+        <property name="to" value="${warning.solr.mail.to}"></property>
+        <property name="from" value="${warning.solr.mail.from}"></property>
+        <property name="subject" value="${warning.solr.mail.opened.at.subject}"/>
+    </bean>
+    
+</beans>
