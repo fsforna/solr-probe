@@ -7,7 +7,7 @@ The probe checks a json SOLR summary to analyze openedAt and registeredAt index 
 Clone the project and configure the probe by editing the conf.properties file. So run the mvn package. 
 To execute the program you simply use:
 
-java -Djsse.enableSNIExtension=false -Dconf=/usr/local/tai/conf.properties -cp /YOUR_PATH_LIB/lib/*:/solr-probe-1.0-SNAPSHOT.jar it.tai.solr.SolrMain
+java -Djsse.enableSNIExtension=false -Dconf=/conf.properties -cp /YOUR_PATH_LIB/lib/*:/solr-probe-1.0-SNAPSHOT.jar it.tai.solr.SolrMain
 
 # Author
 Francesco Fornasari
