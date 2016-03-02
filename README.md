@@ -9,5 +9,13 @@ To execute the program you simply use:
 
     java -Djsse.enableSNIExtension=false -Dconf=/conf.properties -cp /YOUR_PATH_LIB/lib/*:/solr-probe-1.0-SNAPSHOT.jar it.tai.solr.SolrMain
 
+# What to do, if the automatic message arrives
+
+So, what to do if the automatic message will arrive?
+
+For sure, the information you have (in time) is that your Solr indexes are not changed for too much time and this could be very suspectious in a used environment. No matter if your environment is quite "static" but in average, the indexes not updated, definitely indicates an abnormal condition to consider.
+
+For example, it may happen that the SOLR process went down due to an out-of-memory failure (which balancers normally fail to detect in a clustered environment). In our experience is happened that no errors (or warnings) were stored in the log files, even if the Solr process no longer indexed any content.
+
 # Author
 Francesco Fornasari
